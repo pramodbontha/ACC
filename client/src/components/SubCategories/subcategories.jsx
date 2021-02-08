@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { withStyles } from "@material-ui/core/styles";
 import {
-	Typography,
 	List,
 	ListItem,
 	ListItemText,
@@ -8,20 +8,57 @@ import {
 	Collapse,
 	Button,
 	IconButton,
+	Checkbox,
 } from "@material-ui/core";
 import Container from "@material-ui/core/Container";
 import Grid from "@material-ui/core/Grid";
 import { cyan, grey, blueGrey } from "@material-ui/core/colors";
 import SubProducts from "../SubProducts/subproducts";
-
 import AddIcon from "@material-ui/icons/Add";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import { connect } from "react-redux";
+import * as actions from "../../store/actions/actions";
+
+const CustomCheckbox = withStyles({
+	root: {
+		"&$checked": {
+			color: cyan[600],
+		},
+	},
+	checked: {},
+})((props) => <Checkbox color="default" {...props} />);
 
 const SubCategories = (props) => {
 	const [toExpandId, setToExpandId] = useState(-1);
+	const [subCategories, setSubCatergories] = useState(
+		props.subCategoriesList ? props.subCategoriesList : []
+	);
+
+	const [filteredSubCategories, setFilteredSubCategories] = useState(
+		props.subCategoriesList ? props.subCategoriesList : []
+	);
 	const [open, setOpen] = useState(false);
-	const updateToExpandId = (id) => (event) => {
-		setToExpandId(id);
+	const updateToExpandId = (subCategory) => (event) => {
+		setToExpandId(subCategory.subCategoryId);
+	};
+
+	const handleAddorRemoveSubCategory = (subCategory) => (event) => {
+		event.target.checked
+			? props.onAddSubCategory(subCategory)
+			: props.onRemoveSubCategory(subCategory);
+	};
+
+	const handleChange = (event) => {
+		const text = event.target.value;
+		var filteredSubCategories;
+		if (text && text !== "") {
+			filteredSubCategories = subCategories.filter((subCategory) =>
+				subCategory.subCategoryName.toLowerCase().includes(text)
+			);
+			setFilteredSubCategories(filteredSubCategories);
+		} else {
+			setFilteredSubCategories(subCategories);
+		}
 	};
 
 	const handleClick = (event) => {
@@ -52,25 +89,24 @@ const SubCategories = (props) => {
 						placeholder="search"
 						variant="outlined"
 						margin="dense"
+						onChange={handleChange}
 						style={{ width: "100%", backgroundColor: "white" }}
 					/>
 					<List style={{ padding: "none" }}>
-						{props.subCategoriesList.map((subCategory) => (
+						{filteredSubCategories.map((subCategory) => (
 							<div key={subCategory.subCategoryId}>
-								<ListItem
-									button
-									onClick={updateToExpandId(subCategory.subCategoryId)}
-								>
+								<ListItem button onClick={updateToExpandId(subCategory)}>
 									<ListItemText primary={subCategory.subCategoryName} />
+									<CustomCheckbox
+										onChange={handleAddorRemoveSubCategory(subCategory)}
+									/>
 								</ListItem>
 								<Collapse
 									in={subCategory.subCategoryId === toExpandId}
 									timeout="auto"
 									unmountOnExit
 								>
-									<div
-										style={{ backgroundColor: blueGrey[800], padding: "10px" }}
-									>
+									<div style={{ backgroundColor: grey[500], padding: "10px" }}>
 										<SubProducts
 											subProductsList={subCategory.subProducts}
 										></SubProducts>
@@ -92,4 +128,17 @@ const SubCategories = (props) => {
 	);
 };
 
-export default SubCategories;
+const mapStateToProps = (state) => ({
+	selectedSubCategories: state.selectedSubCategories,
+});
+
+const mapDispatchToProps = (dispatch) => {
+	return {
+		onAddSubCategory: (subCategory) =>
+			dispatch(actions.addSubCategory(subCategory)),
+		onRemoveSubCategory: (subCategory) =>
+			dispatch(actions.removeSubCategory(subCategory)),
+	};
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(SubCategories);

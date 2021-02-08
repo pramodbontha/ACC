@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { withStyles } from "@material-ui/core/styles";
 import {
 	Typography,
 	Button,
@@ -6,6 +7,7 @@ import {
 	ListItem,
 	ListItemText,
 	Collapse,
+	Checkbox,
 } from "@material-ui/core";
 import Container from "@material-ui/core/Container";
 import Grid from "@material-ui/core/Grid";
@@ -13,13 +15,43 @@ import { cyan, grey, blueGrey } from "@material-ui/core/colors";
 import SubCategories from "../SubCategories/subcategories";
 import AddIcon from "@material-ui/icons/Add";
 import { getProducts } from "../../services/products";
+import { connect } from "react-redux";
+import * as actions from "../../store/actions/actions";
+import SaveProductsDialog from "./saveproductsdialog";
 
-const Products = () => {
+const CustomCheckbox = withStyles({
+	root: {
+		"&$checked": {
+			color: cyan[600],
+		},
+	},
+	checked: {},
+})((props) => <Checkbox color="default" {...props} />);
+
+const Products = (props) => {
 	const [toExpandId, setToExpandId] = useState(-1);
 	const [productsList, setProductsList] = useState([]);
+	const [openSaveProductsDialog, setOpenSaveProductsDialog] = useState(false);
 
-	const updateToExpandId = (id) => (event) => {
-		setToExpandId(id);
+	const updateToExpandId = (product) => (event) => {
+		setToExpandId(product.productId);
+	};
+
+	const handleAddorRemoveProduct = (product) => (event) => {
+		event.target.checked
+			? props.onAddProduct(product)
+			: props.onRemoveProduct(product);
+	};
+
+	const showSelectedProjects = (event) => {
+		console.log(props.selectedProducts);
+		console.log(props.selectedSubCategories);
+		console.log(props.selectedSubProducts);
+		setOpenSaveProductsDialog(true);
+	};
+
+	const handleClose = (event) => {
+		setOpenSaveProductsDialog(false);
 	};
 
 	useEffect(() => {
@@ -30,6 +62,7 @@ const Products = () => {
 
 		fetchAllProducts();
 	}, [1]);
+
 	return (
 		<div>
 			<Container
@@ -51,7 +84,11 @@ const Products = () => {
 						</Typography>
 					</Grid>
 					<Grid item xs={2}>
-						<Button variant="contained" size="small">
+						<Button
+							variant="contained"
+							size="small"
+							onClick={showSelectedProjects}
+						>
 							Done
 						</Button>
 					</Grid>
@@ -63,9 +100,13 @@ const Products = () => {
 					<List style={{ backgroundColor: "white", overflow: "auto" }}>
 						{productsList.map((product) => (
 							<div key={product.productId}>
-								<ListItem button onClick={updateToExpandId(product.productId)}>
+								<ListItem button onClick={updateToExpandId(product)}>
 									<ListItemText primary={product.productName} />
+									<CustomCheckbox
+										onChange={handleAddorRemoveProduct(product)}
+									/>
 								</ListItem>
+
 								<Collapse
 									in={product.productId === toExpandId}
 									timeout="auto"
@@ -91,8 +132,28 @@ const Products = () => {
 					Add product
 				</Button>
 			</Container>
+			<SaveProductsDialog
+				dialogOpen={openSaveProductsDialog}
+				selectedProducts={props.selectedProducts}
+				selectedSubCategories={props.selectedSubCategories}
+				selectedSubProducts={props.selectedSubProducts}
+				handleClose={handleClose}
+			/>
 		</div>
 	);
 };
 
-export default Products;
+const mapStateToProps = (state) => ({
+	selectedProducts: state.selectedProducts,
+	selectedSubCategories: state.selectedSubCategories,
+	selectedSubProducts: state.selectedSubProducts,
+});
+
+const mapDispatchToProps = (dispatch) => {
+	return {
+		onAddProduct: (product) => dispatch(actions.addProduct(product)),
+		onRemoveProduct: (product) => dispatch(actions.removeProduct(product)),
+	};
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Products);
